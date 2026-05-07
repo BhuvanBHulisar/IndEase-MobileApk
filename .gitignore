@@ -27,6 +27,10 @@ DerivedData
 build/
 .idea
 .gradle
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
 local.properties
 *.iml
 *.hprof
