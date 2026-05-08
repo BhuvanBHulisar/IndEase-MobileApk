@@ -17,6 +17,9 @@ import 'screens/requests/create_request_screen.dart';
 import 'screens/requests/request_details_screen.dart';
 import 'screens/requests/requests_screen.dart';
 import 'screens/requests/view_quotes_screen.dart';
+import 'screens/payment/payment_confirmation_screen.dart';
+import 'screens/payment/payment_success_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'widgets/app_shell.dart';
 
 class IndEaseApp extends StatefulWidget {
@@ -47,7 +50,7 @@ class _IndEaseAppState extends State<IndEaseApp> {
           error: AppColors.error,
         ),
         scaffoldBackgroundColor: AppColors.background,
-        textTheme: GoogleFonts.dmSansTextTheme(baseTextTheme).apply(
+        textTheme: GoogleFonts.workSansTextTheme(baseTextTheme).apply(
           bodyColor: AppColors.textPrimary,
           displayColor: AppColors.textPrimary,
         ),
@@ -112,6 +115,10 @@ class _IndEaseAppState extends State<IndEaseApp> {
           path: '/register',
           builder: (context, state) => const RegisterScreen(),
         ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
+        ),
         ShellRoute(
           builder: (context, state, child) => AppShell(
             location: state.uri.toString(),
@@ -175,6 +182,18 @@ class _IndEaseAppState extends State<IndEaseApp> {
         GoRoute(
           path: '/notifications',
           builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/payment/:requestId',
+          builder: (context, state) => PaymentConfirmationScreen(
+            requestId: state.pathParameters['requestId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/payment/:requestId/success',
+          builder: (context, state) => PaymentSuccessScreen(
+            requestId: state.pathParameters['requestId']!,
+          ),
         ),
       ],
     );

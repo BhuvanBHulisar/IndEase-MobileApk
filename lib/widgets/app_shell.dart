@@ -43,9 +43,15 @@ class AppShell extends StatelessWidget {
       ),
     ];
 
-    final currentIndex = destinations.indexWhere(
-      (destination) => location.startsWith(destination.route),
-    );
+    final currentIndex = () {
+      for (int i = 0; i < destinations.length; i++) {
+        if (location == destinations[i].route ||
+            location.startsWith('${destinations[i].route}/')) {
+          return i;
+        }
+      }
+      return 0;
+    }();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,7 +60,7 @@ class AppShell extends StatelessWidget {
         height: 74,
         backgroundColor: Colors.white,
         indicatorColor: AppColors.primary.withOpacity(0.12),
-        selectedIndex: currentIndex < 0 ? 0 : currentIndex,
+        selectedIndex: currentIndex,
         destinations: destinations
             .map(
               (destination) => NavigationDestination(

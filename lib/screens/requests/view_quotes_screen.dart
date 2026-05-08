@@ -30,15 +30,9 @@ class ViewQuotesScreen extends StatelessWidget {
             quote: quote,
             onApprove: () {
               context.read<RequestProvider>().approveQuote(requestId, quote);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Expert confirmed! Proceeding to payment...'),
-                ),
-              );
-              context.go('/requests');
+              context.go('/payment/$requestId');
             },
-            onAskQuestion: () => context.push('/chat/1'),
+            onAskQuestion: () => context.push('/chat/${quote.id}'),
           );
         },
       ),

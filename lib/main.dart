@@ -8,7 +8,7 @@ import 'providers/notification_provider.dart';
 import 'providers/request_provider.dart';
 
 void main() {
-  GoogleFonts.config.allowRuntimeFetching = false;
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   final authProvider = AuthProvider();
   final requestProvider = RequestProvider();
