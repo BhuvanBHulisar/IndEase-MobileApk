@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/colors.dart';
-import '../../constants/mock_data.dart';
 import '../../constants/spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/request_provider.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_input.dart';
@@ -29,21 +29,25 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    context.read<AuthProvider>().login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-    context.go('/home');
-  }
-
-  void _demoLogin() {
-    setState(() {
-      _emailController.text = demoEmail;
-      _passwordController.text = demoPassword;
-    });
-    context.read<AuthProvider>().demoLogin();
-    context.go('/home');
+  Future<void> _login() async {
+    final auth = context.read<AuthProvider>();
+    await auth.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+    if (auth.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error!),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } else {
+      // Pre-load requests after successful login
+      await context.read<RequestProvider>().fetchRequests();
+      if (mounted) context.go('/home');
+    }
   }
 
   @override
@@ -66,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AppInput(
                       label: 'Email',
                       controller: _emailController,
-                      hintText: 'demo@consumer.com',
+                      hintText: 'you@example.com',
                       keyboardType: TextInputType.emailAddress,
                       prefixIcon: Icons.mail_outline_rounded,
                     ),
@@ -79,15 +83,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icons.lock_outline_rounded,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    AppButton(
-                      label: 'Login',
-                      onPressed: _login,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    AppButton(
-                      label: 'Demo Login',
-                      onPressed: _demoLogin,
-                      variant: AppButtonVariant.outline,
+                    Consumer<AuthProvider>(
+                      builder: (_, auth, __) => AppButton(
+                        label: auth.isLoading ? 'Logging in...' : 'Login',
+                        onPressed: auth.isLoading ? null : _login,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     TextButton(

@@ -34,20 +34,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
-    context.read<AuthProvider>().register(
-          firstName: _firstNameController.text.trim().isEmpty
-              ? 'Amit'
-              : _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim().isEmpty
-              ? 'Kumar'
-              : _lastNameController.text.trim(),
-          email: _emailController.text.trim().isEmpty
-              ? 'amit@example.com'
-              : _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-    context.go('/home');
+  Future<void> _register() async {
+    if (_passwordController.text != _confirmController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    await auth.register(
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+    if (auth.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error!),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } else {
+      context.go('/home');
+    }
   }
 
   @override
@@ -111,7 +126,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    AppButton(label: 'Register', onPressed: _register),
+                    Consumer<AuthProvider>(
+                      builder: (_, auth, __) => AppButton(
+                        label:
+                            auth.isLoading ? 'Registering...' : 'Register',
+                        onPressed: auth.isLoading ? null : _register,
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     TextButton(
                       onPressed: () => context.go('/login'),

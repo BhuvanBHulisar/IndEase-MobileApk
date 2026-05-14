@@ -46,7 +46,7 @@ class _MachineFormScreenState extends State<MachineFormScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final provider = context.read<RequestProvider>();
     final name = _nameController.text.trim().isEmpty
         ? 'New Machine'
@@ -54,16 +54,17 @@ class _MachineFormScreenState extends State<MachineFormScreen> {
     final year = int.tryParse(_yearController.text.trim()) ?? 2020;
 
     if (_isEditing) {
-      provider.updateMachine(
+      await provider.updateMachine(
         id: widget.machineId!,
         name: name,
         type: _selectedType,
         year: year,
       );
     } else {
-      provider.addMachine(name: name, type: _selectedType, year: year);
+      await provider.addMachine(name: name, type: _selectedType, year: year);
     }
 
+    if (!mounted) return;
     context.go('/machines');
   }
 

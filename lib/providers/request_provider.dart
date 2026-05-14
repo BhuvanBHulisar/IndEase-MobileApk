@@ -1,30 +1,28 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-
-import '../constants/mock_data.dart';
 import '../models/machine_model.dart';
 import '../models/quote_model.dart';
 import '../models/request_model.dart';
+import '../services/api_service.dart';
 
 class RequestProvider extends ChangeNotifier {
-  final List<MachineModel> _machines = List<MachineModel>.from(mockMachines);
-  final List<RequestModel> _requests = List<RequestModel>.from(mockRequests);
-  final Map<String, List<QuoteModel>> _quotesByRequest =
-      Map<String, List<QuoteModel>>.from(mockQuotesByRequest);
+  List<MachineModel> _machines = [];
+  List<RequestModel> _requests = [];
+  final Map<String, List<QuoteModel>> _quotesByRequest = {};
+  bool _isLoading = false;
+  String? _error;
 
-  List<MachineModel> get machines => List<MachineModel>.unmodifiable(_machines);
-  List<RequestModel> get requests => List<RequestModel>.unmodifiable(_requests);
+  List<MachineModel> get machines => List.unmodifiable(_machines);
+  List<RequestModel> get requests => List.unmodifiable(_requests);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   int get activeRequestsCount => _requests
-      .where(
-        (request) => request.status != 'completed' && request.status != 'cancelled',
-      )
+      .where((r) => r.status != 'completed' && r.status != 'cancelled')
       .length;
 
   MachineModel? machineById(String id) {
     try {
-      return _machines.firstWhere((machine) => machine.id == id);
+      return _machines.firstWhere((m) => m.id == id);
     } catch (_) {
       return null;
     }
@@ -32,120 +30,152 @@ class RequestProvider extends ChangeNotifier {
 
   RequestModel? requestById(String id) {
     try {
-      return _requests.firstWhere((request) => request.id == id);
+      return _requests.firstWhere((r) => r.id == id);
     } catch (_) {
       return null;
     }
   }
 
   List<QuoteModel> quotesForRequest(String requestId) {
-    return List<QuoteModel>.unmodifiable(
-      _quotesByRequest[requestId] ?? mockQuotesByRequest['1'] ?? const [],
-    );
+    return List.unmodifiable(_quotesByRequest[requestId] ?? []);
   }
 
-  Future<void> refreshRequests() async {
-    await Future<void>.delayed(const Duration(seconds: 1));
+  Future<void> fetchMachines() async {
+    _isLoading = true;
     notifyListeners();
-  }
-
-  void addMachine({
-    required String name,
-    required String type,
-    required int year,
-  }) {
-    _machines.add(
-      MachineModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        type: type,
-        year: year,
-      ),
-    );
-    notifyListeners();
-  }
-
-  void updateMachine({
-    required String id,
-    required String name,
-    required String type,
-    required int year,
-  }) {
-    final index = _machines.indexWhere((machine) => machine.id == id);
-    if (index == -1) {
-      return;
+    try {
+      final data = await ApiService.get('/machines') as List;
+      _machines = data.map((j) => MachineModel.fromJson(j)).toList();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
+  }
 
-    _machines[index] = _machines[index].copyWith(
-      name: name,
-      type: type,
-      year: year,
-    );
+  Future<void> fetchRequests() async {
+    _isLoading = true;
     notifyListeners();
-  }
-
-  void cancelRequest(String requestId) {
-    _updateRequestStatus(requestId, 'cancelled');
-  }
-
-  void confirmCompletion(String requestId) {
-    _updateRequestStatus(requestId, 'completed');
-  }
-
-  void approveQuote(String requestId, QuoteModel quote) {
-    final index = _requests.indexWhere((request) => request.id == requestId);
-    if (index == -1) {
-      return;
+    try {
+      final data = await ApiService.get('/jobs/my') as List;
+      _requests = data.map((j) => RequestModel.fromJson(j)).toList();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _requests[index] = _requests[index].copyWith(
-      status: 'in_progress',
-      expertName: quote.expertName,
-      updatedAt: 'Just now',
-    );
-    notifyListeners();
   }
 
-  String createRequest({
+  Future<void> fetchQuotesForRequest(String requestId) async {
+    try {
+      final data = await ApiService.get('/jobs/$requestId/quotes') as List;
+      _quotesByRequest[requestId] =
+          data.map((j) => QuoteModel.fromJson(j)).toList();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshRequests() => fetchRequests();
+
+  Future<String?> createRequest({
     required MachineModel machine,
     required String issue,
     required String urgency,
     required String preferredDate,
     required String preferredSlot,
     required String budgetHint,
-  }) {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-
-    _requests.insert(
-      0,
-      RequestModel(
-        id: id,
-        machineId: machine.id,
-        machineName: machine.name,
-        machineType: machine.type,
-        issue: issue,
-        status: 'broadcast',
-        updatedAt: 'Just now',
-        urgency: urgency,
-        preferredDate: preferredDate,
-        preferredSlot: preferredSlot,
-        budgetHint: budgetHint.isEmpty ? 'Not specified' : budgetHint,
-      ),
-    );
-    notifyListeners();
-    return id;
+  }) async {
+    try {
+      final data = await ApiService.post('/jobs', {
+        'machine_id': machine.id,
+        'issue_description': issue,
+        'urgency': urgency,
+        'preferred_date': preferredDate,
+        'preferred_slot': preferredSlot,
+        'budget_hint': budgetHint,
+      });
+      await fetchRequests();
+      return data['id']?.toString();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
   }
 
-  void _updateRequestStatus(String requestId, String status) {
-    final index = _requests.indexWhere((request) => request.id == requestId);
-    if (index == -1) {
-      return;
+  Future<void> addMachine({
+    required String name,
+    required String type,
+    required int year,
+  }) async {
+    try {
+      await ApiService.post('/machines', {
+        'name': name,
+        'machine_type': type,
+        'year_of_manufacture': year,
+      });
+      await fetchMachines();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
     }
+  }
 
-    _requests[index] = _requests[index].copyWith(
-      status: status,
-      updatedAt: 'Just now',
-    );
-    notifyListeners();
+  Future<void> updateMachine({
+    required String id,
+    required String name,
+    required String type,
+    required int year,
+  }) async {
+    try {
+      await ApiService.patch('/machines/$id', {
+        'name': name,
+        'machine_type': type,
+        'year_of_manufacture': year,
+      });
+      await fetchMachines();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> approveQuote(String requestId, QuoteModel quote) async {
+    try {
+      await ApiService.post('/jobs/$requestId/accept-quote', {
+        'quote_id': quote.id,
+        'producer_id': quote.id,
+        'quoted_cost': quote.total,
+      });
+      await fetchRequests();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> confirmCompletion(String requestId) async {
+    try {
+      await ApiService.patch('/jobs/$requestId/confirm-complete', {});
+      await fetchRequests();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> cancelRequest(String requestId) async {
+    try {
+      await ApiService.patch('/jobs/$requestId/cancel', {});
+      await fetchRequests();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 }

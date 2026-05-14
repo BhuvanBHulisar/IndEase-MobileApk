@@ -68,4 +68,21 @@ class RequestModel {
       aiConfidence: aiConfidence ?? this.aiConfidence,
     );
   }
+
+  factory RequestModel.fromJson(Map<String, dynamic> json) {
+    return RequestModel(
+      id: json['id'].toString(),
+      machineId: json['machine_id']?.toString() ?? '',
+      machineName: json['machine_name'] ?? 'Unknown Machine',
+      machineType: json['machine_type'] ?? 'Machine',
+      issue: json['issue_description'] ?? '',
+      status: json['status'] ?? 'broadcast',
+      updatedAt: json['updated_at'] ?? json['created_at'] ?? '',
+      expertName: json['other_party'],
+      urgency: json['urgency'] ?? 'Normal',
+      preferredDate: json['preferred_date'] ?? '',
+      preferredSlot: json['preferred_slot'] ?? '',
+      budgetHint: json['budget_hint'] ?? '',
+    );
+  }
 }

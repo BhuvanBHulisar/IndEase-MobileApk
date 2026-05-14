@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/chat_model.dart';
-import '../models/machine_model.dart';
 import '../models/notification_model.dart';
-import '../models/quote_model.dart';
-import '../models/request_model.dart';
 import 'colors.dart';
-
-const String mockUserFirstName = 'Amit';
-const String mockUserLastName = 'Kumar';
-const String mockUserEmail = 'amit@example.com';
-const String demoEmail = 'demo@consumer.com';
-const String demoPassword = 'demo123';
 
 const List<String> machineTypes = [
   'CNC',
@@ -21,113 +12,6 @@ const List<String> machineTypes = [
   'Lathe',
   'Other',
 ];
-
-final List<MachineModel> mockMachines = [
-  const MachineModel(
-    id: '1',
-    name: 'Main CNC Milling Unit',
-    type: 'CNC Concentric',
-    year: 1990,
-  ),
-  const MachineModel(
-    id: '2',
-    name: 'Hydraulic Press #2',
-    type: 'Hydraulic Press',
-    year: 2005,
-  ),
-  const MachineModel(
-    id: '3',
-    name: 'Motor Assembly Line',
-    type: 'Electric Motor',
-    year: 2012,
-  ),
-];
-
-final List<RequestModel> mockRequests = [
-  const RequestModel(
-    id: '1',
-    machineId: '1',
-    machineName: 'Main CNC Milling Unit',
-    machineType: 'CNC Machine',
-    issue: 'Strange grinding noise from spindle',
-    status: 'quote_submitted',
-    updatedAt: '2 hrs ago',
-    expertName: 'Rajesh K.',
-  ),
-  const RequestModel(
-    id: '2',
-    machineId: '2',
-    machineName: 'Hydraulic Press #2',
-    machineType: 'Hydraulic Press',
-    issue: 'Pressure valve leaking',
-    status: 'in_progress',
-    updatedAt: '1 day ago',
-    expertName: 'Suresh M.',
-    urgency: 'Critical',
-    preferredDate: '3 May',
-    preferredSlot: 'Afternoon',
-    budgetHint: '₹3,000 – ₹6,000',
-    aiMachineType: 'Hydraulic Press',
-    aiIssue: 'Valve seal failure likely',
-    aiConfidence: 0.81,
-  ),
-  const RequestModel(
-    id: '3',
-    machineId: '3',
-    machineName: 'Motor Assembly Line',
-    machineType: 'Electric Motor',
-    issue: 'Belt slipping at high speed',
-    status: 'broadcast',
-    updatedAt: '3 hrs ago',
-    urgency: 'Normal',
-    preferredDate: '5 May',
-    preferredSlot: 'Any time',
-    budgetHint: '₹1,500 – ₹4,000',
-    aiMachineType: 'Motor Assembly System',
-    aiIssue: 'Drive belt wear detected',
-    aiConfidence: 0.74,
-  ),
-];
-
-final Map<String, List<QuoteModel>> mockQuotesByRequest = {
-  '1': const [
-    QuoteModel(
-      id: 'q1',
-      requestId: '1',
-      expertName: 'Rajesh K. Sharma',
-      rating: 5.0,
-      level: 'Bronze',
-      jobsDone: 3,
-      diagnosisNote:
-          'Based on the video, inner bearing race failure. Will replace both bearings and test.',
-      scopeOfWork: 'Inspect → Replace bearings → Lubricate → Load test',
-      labourCost: 2500,
-      partsCost: 800,
-      total: 3300,
-      estimatedHours: 3,
-      availableDate: '2 May',
-      availableSlot: 'Morning',
-      visitType: 'On-site',
-    ),
-    QuoteModel(
-      id: 'q2',
-      requestId: '1',
-      expertName: 'Suresh Mehta',
-      rating: 4.2,
-      level: 'Starter',
-      jobsDone: 1,
-      diagnosisNote: 'Will inspect on-site and diagnose.',
-      scopeOfWork: 'Initial inspection → Fault isolation → Repair plan → Final test',
-      labourCost: 2400,
-      partsCost: 0,
-      total: 2400,
-      estimatedHours: 4,
-      availableDate: '3 May',
-      availableSlot: 'Afternoon',
-      visitType: 'On-site',
-    ),
-  ],
-};
 
 final List<ChatThread> mockChatThreads = [
   const ChatThread(

@@ -138,7 +138,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             Expanded(
               child: AppButton(
                 label: _step == 5 ? 'Submit Request' : 'Continue',
-                onPressed: _showAnalysis ? null : () => _next(context),
+                onPressed: _showAnalysis ? null : _next,
               ),
             ),
           ],
@@ -373,29 +373,43 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     }
   }
 
-  Future<void> _next(BuildContext context) async {
+  Future<void> _next() async {
     if (_step < 5) {
       setState(() => _step += 1);
       return;
     }
 
     final provider = context.read<RequestProvider>();
-    provider.createRequest(
+    setState(() => _showAnalysis = true);
+
+    final newId = await provider.createRequest(
       machine: _selectedMachine ?? provider.machines.first,
       issue: _issueController.text.trim().isEmpty
           ? 'General maintenance issue reported'
           : _issueController.text.trim(),
       urgency: _urgency,
       preferredDate: _preferredDate == null
-          ? DateFormat('d MMM').format(DateTime.now().add(const Duration(days: 1)))
+          ? DateFormat('d MMM').format(
+              DateTime.now().add(const Duration(days: 1)),
+            )
           : DateFormat('d MMM').format(_preferredDate!),
       preferredSlot: _slot,
       budgetHint: _budgetController.text.trim(),
     );
 
-    setState(() => _showAnalysis = true);
     await Future<void>.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
+    if (newId == null) {
+      setState(() => _showAnalysis = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Failed to submit request.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     context.go('/requests');
   }
 }

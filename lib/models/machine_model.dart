@@ -28,4 +28,14 @@ class MachineModel {
       status: status ?? this.status,
     );
   }
+
+  factory MachineModel.fromJson(Map<String, dynamic> json) {
+    return MachineModel(
+      id: json['id'].toString(),
+      name: json['name'] ?? 'Unknown Machine',
+      type: json['machine_type'] ?? json['type'] ?? 'Unknown',
+      year: int.tryParse(json['year_of_manufacture']?.toString() ?? '') ?? 0,
+      status: json['status'] ?? 'Optimal',
+    );
+  }
 }

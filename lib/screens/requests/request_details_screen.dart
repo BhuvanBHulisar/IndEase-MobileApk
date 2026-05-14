@@ -300,7 +300,7 @@ class RequestDetailsScreen extends StatelessWidget {
     }
   }
 
-  void _handleAction(BuildContext context, RequestModel request) {
+  Future<void> _handleAction(BuildContext context, RequestModel request) async {
     final provider = context.read<RequestProvider>();
     switch (request.status) {
       case 'quote_submitted':
@@ -311,11 +311,13 @@ class RequestDetailsScreen extends StatelessWidget {
         context.push('/chat/${request.id == '2' ? '2' : '1'}');
         break;
       case 'pending_confirmation':
-        provider.confirmCompletion(request.id);
+        await provider.confirmCompletion(request.id);
         break;
       case 'broadcast':
-        provider.cancelRequest(request.id);
-        context.pop();
+        await provider.cancelRequest(request.id);
+        if (context.mounted) {
+          context.pop();
+        }
         break;
     }
   }

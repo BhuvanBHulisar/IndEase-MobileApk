@@ -12,8 +12,22 @@ import '../../widgets/app_button.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/status_badge.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RequestProvider>().fetchRequests();
+      context.read<RequestProvider>().fetchMachines();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +111,10 @@ class HomeScreen extends StatelessWidget {
             label: '+ Create New Request',
             onPressed: () => context.push('/requests/create'),
           ),
+          if (requests.isLoading) ...[
+            const SizedBox(height: AppSpacing.md),
+            const LinearProgressIndicator(),
+          ],
           const SizedBox(height: AppSpacing.xl),
           _SectionHeader(
             title: 'Active Requests',
@@ -106,6 +124,14 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          if (activeRequests.isEmpty && !requests.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Text(
+                'No active requests yet.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
           ...activeRequests.map(
             (request) => Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -143,7 +169,8 @@ class HomeScreen extends StatelessWidget {
                         request.issue,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style:
+                            const TextStyle(color: AppColors.textSecondary),
                       ),
                     ],
                   ),

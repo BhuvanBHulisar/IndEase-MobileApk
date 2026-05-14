@@ -9,12 +9,26 @@ import '../../widgets/app_button.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/empty_state.dart';
 
-class MachinesScreen extends StatelessWidget {
+class MachinesScreen extends StatefulWidget {
   const MachinesScreen({super.key});
 
   @override
+  State<MachinesScreen> createState() => _MachinesScreenState();
+}
+
+class _MachinesScreenState extends State<MachinesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RequestProvider>().fetchMachines();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final machines = context.watch<RequestProvider>().machines;
+    final provider = context.watch<RequestProvider>();
+    final machines = provider.machines;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -39,13 +53,19 @@ class MachinesScreen extends StatelessWidget {
               ),
             ],
           ),
+          if (provider.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: LinearProgressIndicator(),
+            ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
-            child: machines.isEmpty
+            child: machines.isEmpty && !provider.isLoading
                 ? EmptyState(
                     icon: Icons.handyman_rounded,
                     title: 'No machines added yet',
-                    subtitle: 'Track service history by adding your first machine.',
+                    subtitle:
+                        'Track service history by adding your first machine.',
                     buttonLabel: 'Add your first machine',
                     onPressed: () => context.push('/machines/add'),
                   )
@@ -64,7 +84,8 @@ class MachinesScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.1),
+                                    color:
+                                        AppColors.primary.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: const Icon(
@@ -96,8 +117,8 @@ class MachinesScreen extends StatelessWidget {
                                   ),
                                 ),
                                 TextButton(
-                                  onPressed: () =>
-                                      context.push('/machines/edit/${machine.id}'),
+                                  onPressed: () => context
+                                      .push('/machines/edit/${machine.id}'),
                                   child: const Text('Edit'),
                                 ),
                               ],
@@ -111,12 +132,14 @@ class MachinesScreen extends StatelessWidget {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.success.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(999),
+                                    color:
+                                        AppColors.success.withOpacity(0.12),
+                                    borderRadius:
+                                        BorderRadius.circular(999),
                                   ),
-                                  child: const Text(
-                                    'Optimal',
-                                    style: TextStyle(
+                                  child: Text(
+                                    machine.status,
+                                    style: const TextStyle(
                                       color: AppColors.success,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -127,7 +150,8 @@ class MachinesScreen extends StatelessWidget {
                                   width: 170,
                                   child: AppButton(
                                     label: 'Request Service',
-                                    onPressed: () => context.push('/requests/create'),
+                                    onPressed: () =>
+                                        context.push('/requests/create'),
                                   ),
                                 ),
                               ],
