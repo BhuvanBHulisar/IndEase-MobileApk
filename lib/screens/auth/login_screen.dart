@@ -89,6 +89,48 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: auth.isLoading ? null : _login,
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Consumer<AuthProvider>(
+                      builder: (_, auth, __) => AppButton(
+                        label: 'Demo Login (Offline Mode)',
+                        variant: AppButtonVariant.outline,
+                        onPressed: auth.isLoading
+                            ? null
+                            : () async {
+                                final authProv = context.read<AuthProvider>();
+                                await authProv.loginDemo();
+                                if (!mounted) return;
+                                await context.read<RequestProvider>().fetchRequests();
+                                if (mounted) context.go('/home');
+                              },
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Consumer<AuthProvider>(
+                      builder: (_, auth, __) => AppButton(
+                        label: 'Continue with Google',
+                        variant: AppButtonVariant.outline,
+                        icon: Icons.account_circle_outlined,
+                        onPressed: auth.isLoading
+                            ? null
+                            : () async {
+                                final authProv = context.read<AuthProvider>();
+                                await authProv.loginWithGoogle();
+                                if (!mounted) return;
+                                if (authProv.error != null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(authProv.error!),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                } else {
+                                  await context.read<RequestProvider>().fetchRequests();
+                                  if (mounted) context.go('/home');
+                                }
+                              },
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     TextButton(
                       onPressed: () => context.push('/forgot-password'),

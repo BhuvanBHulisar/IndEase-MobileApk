@@ -1,88 +1,154 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/api.dart';
 
 class ApiService {
-  // Android emulator → 10.0.2.2 maps to the host machine's localhost.
-  // Real device / production → replace with your server IP or domain.
-  static const String baseUrl = 'http://10.0.2.2:5000/api';
+  static const String _tokenKey = 'indease_token';
 
-  static Future<String?> _getToken() async {
+  // ── TOKEN MANAGEMENT ──────────────────────────────────────
+  static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return prefs.getString(_tokenKey);
   }
 
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  // ── HEADERS ───────────────────────────────────────────────
   static Future<Map<String, String>> _headers({bool auth = true}) async {
     final headers = {'Content-Type': 'application/json'};
     if (auth) {
-      final token = await _getToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final token = await getToken();
+      if (token != null) {
+        final backendToken = (token == 'demo-token-consumer-google')
+            ? 'demo-token-consumer'
+            : token;
+        headers['Authorization'] = 'Bearer $backendToken';
+      }
     }
     return headers;
   }
 
-  static Future<dynamic> get(String path) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-    );
-    _checkStatus(res);
-    return jsonDecode(res.body);
+  // ── GET ───────────────────────────────────────────────────
+  static Future<dynamic> get(String endpoint) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await http
+        .get(uri, headers: await _headers())
+        .timeout(const Duration(seconds: 5));
+    return _handle(response);
   }
 
-  static Future<dynamic> post(
-    String path,
-    Map<String, dynamic> body, {
-    bool auth = true,
-  }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(auth: auth),
-      body: jsonEncode(body),
-    );
-    _checkStatus(res);
-    return jsonDecode(res.body);
+  // ── POST ──────────────────────────────────────────────────
+  static Future<dynamic> post(String endpoint, Map<String, dynamic> body,
+      {bool auth = true}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await http
+        .post(
+          uri,
+          headers: await _headers(auth: auth),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 5));
+    return _handle(response);
   }
 
-  static Future<dynamic> patch(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
-    final res = await http.patch(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-      body: jsonEncode(body),
-    );
-    _checkStatus(res);
-    return jsonDecode(res.body);
+  // ── PUT ───────────────────────────────────────────────────
+  static Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await http
+        .put(
+          uri,
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 5));
+    return _handle(response);
   }
 
-  static Future<dynamic> delete(String path) async {
-    final res = await http.delete(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-    );
-    _checkStatus(res);
-    return jsonDecode(res.body);
+  // ── PATCH ─────────────────────────────────────────────────
+  static Future<dynamic> patch(String endpoint,
+      [Map<String, dynamic>? body]) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await http
+        .patch(
+          uri,
+          headers: await _headers(),
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(const Duration(seconds: 5));
+    return _handle(response);
   }
 
-  static void _checkStatus(http.Response res) {
-    if (res.statusCode >= 400) {
-      final body = jsonDecode(res.body);
+  // ── DELETE ────────────────────────────────────────────────
+  static Future<dynamic> delete(String endpoint) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await http
+        .delete(uri, headers: await _headers())
+        .timeout(const Duration(seconds: 5));
+    return _handle(response);
+  }
+
+  // ── MULTIPART (file upload) ───────────────────────────────
+  static Future<dynamic> uploadFile(
+      String endpoint, File file, String fieldName,
+      {Map<String, String>? fields}) async {
+    final token = await getToken();
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final request = http.MultipartRequest('POST', uri);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+
+    if (fields != null) request.fields.addAll(fields);
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _handle(response);
+  }
+
+  // ── RESPONSE HANDLER ──────────────────────────────────────
+  static dynamic _handle(http.Response response) {
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
       throw ApiException(
-        body['message'] ?? 'Server error',
-        res.statusCode,
+        'Server returned an invalid response (HTTP ${response.statusCode}).',
+        response.statusCode,
       );
     }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+    if (response.statusCode == 401) {
+      clearToken();
+      throw ApiException('Session expired. Please login again.', 401);
+    }
+    final message = body is Map
+        ? (body['message'] ?? body['error'] ?? 'Something went wrong')
+        : 'Something went wrong';
+    throw ApiException(message, response.statusCode);
   }
 }
 
 class ApiException implements Exception {
   final String message;
   final int statusCode;
-
   ApiException(this.message, this.statusCode);
 
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => message;
 }
